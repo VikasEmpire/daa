@@ -1,82 +1,64 @@
 import random
 import time
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 
 def bucket_sort(arr):
+    if not arr: return []
     num_buckets = 10
-    max_val = max(arr)
-    min_val = min(arr)
-    bucket_range = (max_val - min_val + 1) / num_buckets
+    min_val, max_val = min(arr), max(arr)
+    range_size = (max_val - min_val + 1) / num_buckets
 
-    buckets = []
-    for bucket_index in range(num_buckets):
-        buckets.append([])
-    
+    buckets = [[] for _ in range(num_buckets)]
     for num in arr:
-        index = min(int((num - min_val) / bucket_range), num_buckets - 1)
+        index = min(int((num - min_val) / range_size), num_buckets - 1)
         buckets[index].append(num)
 
-    for bucket in buckets:
-        bucket.sort()
+    return [num for bucket in buckets for num in sorted(bucket)]
 
-    sorted_arr = []
-    for bucket in buckets:
-        for num in bucket:
-            sorted_arr.append(num)
-    return sorted_arr
+def generate_input(size, case):
+    if case == 'best':
+        return [random.uniform(0, size) for _ in range(size)]
+    elif case == 'average':
+        return [random.randint(0, size) for _ in range(size)]
+    elif case == 'worst':
+        return [size // 2] * size
 
-# Input sizes
-input_sizes = list(range(5000, 50001, 5000))
-
-# Generate test cases
-def generate_best_case(size):
-    return [random.uniform(0, size) for number in range(size)]
-
-def generate_average_case(size):
-    return [random.randint(0, size) for number in range(size)]
-
-def generate_worst_case(size):
-    return [size // 2 for number in range(size)]
-
-# Measure performance
-best_times = []
-avg_times = []
-worst_times = []
-
-for size in input_sizes:
-    arr = generate_best_case(size)
+def measure_time(arr):
     start = time.time()
     bucket_sort(arr)
-    best_times.append((time.time() - start) * 1000)
+    return (time.time() - start) * 1000  # in milliseconds
 
-    arr = generate_average_case(size)
-    start = time.time()
-    bucket_sort(arr)
-    avg_times.append((time.time() - start) * 1000)
+sizes = list(range(5000, 50001, 5000))
+cases = ['best', 'average', 'worst']
+results = {case: [] for case in cases}
 
-    arr = generate_worst_case(size)
-    start = time.time()
-    bucket_sort(arr)
-    worst_times.append((time.time() - start) * 1000)
+for size in sizes:
+    print(f"Size: {size}", end=', ')
+    for case in cases:
+        time_taken = measure_time(generate_input(size, case))
+        results[case].append(time_taken)
+        print(f"{case.capitalize()}: {time_taken:.2f} ms", end=', ')
+    print()
 
-    print(f"Size: {size:5d}, Best: {best_times[-1]:6.2f} ms, Avg: {avg_times[-1]:6.2f} ms, Worst: {worst_times[-1]:6.2f} ms")
+# Normalize data for plotting
+max_time = max(max(times) for times in results.values())
+max_n = max(sizes)
+max_n2 = max_n ** 2
 
-# Normalization
-max_time = max(best_times + avg_times + worst_times)
-max_n = max(input_sizes)
-max_n_squared = max_n ** 2
-
-# Plotting
 plt.figure(figsize=(12, 6))
-plt.plot(input_sizes, [t/max_time for t in best_times], 'g-', label="Best Case")
-plt.plot(input_sizes, [t/max_time for t in avg_times], 'b--', label="Average Case")
-plt.plot(input_sizes, [t/max_time for t in worst_times], 'r:', label="Worst Case")
-plt.plot(input_sizes, [n/max_n for n in input_sizes], 'k-.', label="O(n)")
-plt.plot(input_sizes, [(n**2)/max_n_squared for n in input_sizes], 'm-.', label="O(n²)")
+colors = {'best': 'g', 'average': 'b', 'worst': 'r'}
+styles = {'best': '-', 'average': '--', 'worst': ':'}
+
+for case in cases:
+    normalized = [t / max_time for t in results[case]]
+    plt.plot(sizes, normalized, color=colors[case], linestyle=styles[case], label=f"{case.capitalize()} Case")
+
+plt.plot(sizes, [n / max_n for n in sizes], 'k-.', label="O(n)")
+plt.plot(sizes, [(n**2)/max_n2 for n in sizes], 'm-.', label="O(n²)")
 
 plt.title("Bucket Sort Performance (Normalized)")
 plt.xlabel("Input Size")
 plt.ylabel("Normalized Time")
 plt.legend()
 plt.grid(True)
-plt.show()  
+plt.show()
